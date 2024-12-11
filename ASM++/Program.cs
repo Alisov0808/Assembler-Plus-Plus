@@ -165,7 +165,7 @@ public unsafe class Sas
         Console.WriteLine("Интерпретация...");
         List<string> commands = File.ReadAllLines(inputFilePath).ToList();
         string[] reserv = commands.ToArray();
-        string file = inputFilePath.ToLower().Replace(".lum", ".asm");
+        string file = inputFilePath.ToLower().Replace(".app", ".asm");
         int mat = 0;
         bool was = false;
         int last = 0;
@@ -718,7 +718,7 @@ public unsafe class Sas
                         }
                         else
                         {
-                            File.AppendAllText(file, $"\njmp main\n{realcommandto.Replace("import ", "include ").Replace(".lum", ".asm")}\n;Import state is not state");
+                            File.AppendAllText(file, $"\njmp main\n{realcommandto.Replace("import ", "include ").Replace(".app", ".asm")}\n;Import state is not state");
                             Process process2 = new Process();
                             process2.StartInfo.FileName = "lumin.exe";
                             process2.StartInfo.UseShellExecute = false;
@@ -731,7 +731,7 @@ public unsafe class Sas
 
                             process2.Start();
                             process2.WaitForExit();
-                            helpfunc.ParsImportlum(command9.Replace(".lum", ".asm").Replace("\"", null), file, func, peremen, typeperemen, macroses, struc);
+                            helpfunc.ParsImportlum(command9.Replace(".app", ".asm").Replace("\"", null), file, func, peremen, typeperemen, macroses, struc);
                         }
                     }
                     catch (Exception)
