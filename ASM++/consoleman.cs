@@ -43,7 +43,7 @@ namespace Lumin
                             {
                                 Random random = new Random();
                                 int g = random.Next(0, 10000001);
-                                string h = temp + $@"\fasm\temp{g}.lum";
+                                string h = temp + $@"\fasm\temp{g}.app";
 
                                 if (!Directory.Exists(temp + @"\fasm"))
                                 {
@@ -75,13 +75,13 @@ namespace Lumin
                                 process2.Start();
                                 process2.WaitForExit();
                                 Process process3 = new Process();
-                                process3.StartInfo.FileName = h.Replace(".lum",".exe");
+                                process3.StartInfo.FileName = h.Replace(".app",".exe");
                                 process3.StartInfo.UseShellExecute = false;
                                 process3.Start();
                                 process3.WaitForExit();
                                 File.Delete(h);
-                                File.Delete(h.Replace(".lum",".asm"));
-                                File.Delete(h.Replace(".lum", ".exe"));
+                                File.Delete(h.Replace(".app",".asm"));
+                                File.Delete(h.Replace(".app", ".exe"));
                                 list.Clear(); 
                                 }
                                 catch (Exception)
