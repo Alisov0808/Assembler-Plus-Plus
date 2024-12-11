@@ -98,14 +98,25 @@
                 if (pere.Contains(","))
                 {
                     string[] p = pere.TrimStart().Split(',', 2);
-                   // Console.WriteLine(p[0]);
-                   // Console.WriteLine(peremen[i]);
+                    // Console.WriteLine(p[0]);
+                    // Console.WriteLine(peremen[i]);
                     if (p[0].Replace("@", null) == peremen[i])
                     {
                         return i;
                     }
                 }
 
+            }
+            return -1;
+        }
+        public static int isreg(string pere)
+        {
+            foreach (var person in Sas.registers)
+            {
+                if (person.Key == pere.Replace(" ", null))
+                {
+                    return 1;
+                }
             }
             return -1;
         }
@@ -138,7 +149,7 @@
             "RBP",   // 64-bit Base Pointer
             "RIP"    // 64-bit Instruction Pointer
         };
-        static public bool Pars(string command, string file, List<string> func, int poz, List<string> peremen, List<string> typeperemen, List<string> macroses, List<string> dllfunc,List<string> stringstoaddend,int strlasted)
+        static public bool Pars(string command, string file, List<string> func, int poz, List<string> peremen, List<string> typeperemen, List<string> macroses, List<string> dllfunc, List<string> stringstoaddend, int strlasted)
         {
             bool tes = false;
             string pattern = @"\d+";
@@ -159,27 +170,29 @@
                         int isp = isperemen(a[0].Trim(), peremen, typeperemen);
                         if (a[1].TrimEnd().EndsWith("@") && a[1].TrimEnd().Contains("\""))
                         {
-                           //Console.WriteLine(a[1].TrimStart().Substring(0, a[1].Length - 1));
-                            a[1] = helpfunc.parsstring(a[1].TrimStart().TrimEnd().Substring(0, a[1].Length-2), true,stringstoaddend,strlasted);
+                            //Console.WriteLine(a[1].TrimStart().Substring(0, a[1].Length - 1));
+                            a[1] = helpfunc.parsstring(a[1].TrimStart().TrimEnd().Substring(0, a[1].Length - 2), true, stringstoaddend, strlasted);
                         }
-                        if (!Sas.Parscall(file, a[1].TrimStart(), func, poz, peremen, typeperemen, macroses, dllfunc, true, false))
+                        if (!Sas.Parscallc(file, a[1].TrimStart(), func, poz, peremen, typeperemen, macroses, dllfunc, true, false))
                         {
                             int isp2 = isperemen(a[1].Trim(), peremen, typeperemen);
+                            int isp3 = isreg(a[0].Trim());
+                            
                             if (char.IsLetter(a[1].Trim()[0]) && a[1].TrimStart().Contains("'") == false)
                             {
-                                if (isp2 == -1)
+                                  if ((isp2 == -1 || isp3 == 1))
                                 {
                                     File.AppendAllText(file, "\n" + $"mov [{a[0]}],[{a[1]}]"); return true;
                                 }
                             }
                             else
                             {
-                                if (isp2 == -1)
+                                  if ((isp2 == -1 || isp3 == 1))
                                 {
                                     File.AppendAllText(file, "\n" + $"mov [{a[0]}],{a[1]}"); return true;
                                 }
                             }
-                           
+
                             if (!helpfunc.ismacro(a[1], func, file, a[1], a[0]))
                             {
                                 if (char.IsLetter(a[1].Trim()[0]) && a[1].TrimStart().Contains("'") == false)
@@ -208,7 +221,7 @@
                                 }
                                 else
                                 {
-                                    
+
                                     if (isp == -1)
                                     {
                                         File.AppendAllText(file, "\n" + $"mov [{a[0]}],[{a[1]}]");
@@ -238,8 +251,18 @@
                         }
                         else
                         {
-
-                            File.AppendAllText(file, $"\nmov [{a[0]}],eax");
+                            if (isp != -1)
+                            {
+                                if (typeperemen[isp] == "word")
+                                {
+                                    File.AppendAllText(file, $"\nmov [{a[0]}],ax");
+                                }
+                                else { File.AppendAllText(file, $"\nmov [{a[0]}],eax"); }
+                            }
+                            else
+                            {
+                                File.AppendAllText(file, $"\nmov [{a[0]}],eax");
+                            }
                         }
                         return true;
 
@@ -257,9 +280,10 @@
 
                         int isp = isperemen(a[0].Trim().Replace(" ", null), peremen, typeperemen);
                         int isp2 = isperemen(a[1].Trim(), peremen, typeperemen);
+                        int isp3 = isreg(a[0].Trim());
                         if (char.IsLetter(a[1].Trim()[0]) && a[1].TrimStart().Contains("'") == false)
                         {
-                            if (isp2 == -1)
+                            if (isp2 == -1 || isp3 == 1)
                             {
                                 File.AppendAllText(file, "\n" + $"lea [{a[0]}],[{a[1]}]"); return true;
                             }
@@ -330,16 +354,17 @@
                         if (!Sas.Parscall(file, a[1].TrimStart(), func, poz, peremen, typeperemen, macroses, dllfunc, true, false))
                         {
                             int isp2 = isperemen(a[1].Trim(), peremen, typeperemen);
+                            int isp3 = isreg(a[0].Trim());
                             if (char.IsLetter(a[1].Trim()[0]) && a[1].TrimStart().Contains("'") == false)
                             {
-                                if (isp2 == -1)
+                                  if ((isp2 == -1 || isp3 == 1))
                                 {
                                     File.AppendAllText(file, "\n" + $"add [{a[0]}],[{a[1]}]"); return true;
                                 }
                             }
                             else
                             {
-                                if (isp2 == -1)
+                                  if ((isp2 == -1 || isp3 == 1))
                                 {
                                     File.AppendAllText(file, "\n" + $"add [{a[0]}],{a[1]}"); return true;
                                 }
@@ -392,7 +417,22 @@
                         else
                         {
 
-                            File.AppendAllText(file, $"\nadd [{a[0]}],eax");
+                            if (isp != -1)
+                            {
+                                if (typeperemen[isp] == "word")
+                                {
+                                    File.AppendAllText(file, $"\nadd [{a[0]}],ax");
+                                }
+                                else if (typeperemen[isp] == "qword")
+                                {
+                                    File.AppendAllText(file, $"\nadd [{a[0]}],rax");
+                                }
+                                else { File.AppendAllText(file, $"\nadd [{a[0]}],eax"); }
+                            }
+                            else
+                            {
+                                File.AppendAllText(file, $"\nadd [{a[0]}],eax");
+                            }
                         }
 
                         return true;
@@ -412,16 +452,17 @@
                         if (!Sas.Parscall(file, a[1].TrimStart(), func, poz, peremen, typeperemen, macroses, dllfunc, true, false))
                         {
                             int isp2 = isperemen(a[1].Trim(), peremen, typeperemen);
+                            int isp3 = isreg(a[0].Trim());
                             if (char.IsLetter(a[1].Trim()[0]) && a[1].TrimStart().Contains("'") == false)
                             {
-                                if (isp2 == -1)
+                                  if ((isp2 == -1 || isp3 == 1))
                                 {
                                     File.AppendAllText(file, "\n" + $"sub [{a[0]}],[{a[1]}]"); return true;
                                 }
                             }
                             else
                             {
-                                if (isp2 == -1)
+                                  if ((isp2 == -1 || isp3 == 1))
                                 {
                                     File.AppendAllText(file, "\n" + $"sub [{a[0]}],{a[1]}"); return true;
                                 }
@@ -473,7 +514,23 @@
                             else
                             {
 
-                                File.AppendAllText(file, $"\nsub [{a[0]}],eax");
+                                if (isp != -1)
+                                {
+                                    if (typeperemen[isp] == "word")
+                                    {
+                                        File.AppendAllText(file, $"\nsub [{a[0]}],ax");
+                                    }
+
+                                    else { File.AppendAllText(file, $"\nsub [{a[0]}],eax"); }
+                                }
+                                else if (typeperemen[isp] == "qword")
+                                {
+                                    File.AppendAllText(file, $"\nsub [{a[0]}],rax");
+                                }
+                                else
+                                {
+                                    File.AppendAllText(file, $"\nsub [{a[0]}],eax");
+                                }
                             }
                             return true;
                         }
@@ -492,16 +549,17 @@
                         if (!Sas.Parscall(file, a[1].TrimStart(), func, poz, peremen, typeperemen, macroses, dllfunc, true, false))
                         {
                             int isp2 = isperemen(a[1].Trim(), peremen, typeperemen);
+                            int isp3 = isreg(a[0].Trim());
                             if (char.IsLetter(a[1].Trim()[0]) && a[1].TrimStart().Contains("'") == false)
                             {
-                                if (isp2 == -1)
+                                  if ((isp2 == -1 || isp3 == 1))
                                 {
                                     File.AppendAllText(file, "\n" + $"imul [{a[0]}],[{a[1]}]"); return true;
                                 }
                             }
                             else
                             {
-                                if (isp2 == -1)
+                                  if ((isp2 == -1 || isp3 == 1))
                                 {
                                     File.AppendAllText(file, "\n" + $"imul [{a[0]}],{a[1]}"); return true;
                                 }
@@ -513,19 +571,19 @@
 
                                     if (typeperemen[isp] == "dword")
                                     {
-                                        File.AppendAllText(file, "\n" + $"\nmov eax,[{a[1]}]\nimul eax,[{a[0]}]\nmov[{a[0]}],eax");
+                                        File.AppendAllText(file, "\n" + $"\nmov eax,[{a[1]}]\nimul eax,[{a[0]}]\nmov [{a[0]}],eax");
                                     }
                                     else if (typeperemen[isp] == "byte")
                                     {
-                                        File.AppendAllText(file, "\n" + $"\nmov bl,[{a[1]}]\nimul bl,[{a[0]}]\nmov[{a[0]}],bl");
+                                        File.AppendAllText(file, "\n" + $"\nmov bl,[{a[1]}]\nimul bl,[{a[0]}]\nmov [{a[0]}],bl");
                                     }
                                     else if (typeperemen[isp] == "word" || typeperemen[isp] == "ubyte")
                                     {
-                                        File.AppendAllText(file, "\n" + $"\nmov ax,[{a[1]}]\nimul ax,[{a[0]}]\nmov[{a[0]}],ax");
+                                        File.AppendAllText(file, "\n" + $"\nmov ax,[{a[1]}]\nimul ax,[{a[0]}]\nmov [{a[0]}],ax");
                                     }
                                     else if (typeperemen[isp] == "tword" || typeperemen[isp] == "qword")
                                     {
-                                        File.AppendAllText(file, "\n" + $"\nmov rax,[{a[1]}]\nimul rax,[{a[0]}]\nmov[{a[0]}],rax");
+                                        File.AppendAllText(file, "\n" + $"\nmov rax,[{a[1]}]\nimul rax,[{a[0]}]\nmov [{a[0]}],rax");
                                     }
                                 }
                                 else
@@ -534,26 +592,41 @@
 
                                     if (typeperemen[isp] == "dword")
                                     {
-                                        File.AppendAllText(file, "\n" + $"\nmov eax,{a[1]}\nimul eax,{a[0]}\nmov {a[0]},eax");
+                                        File.AppendAllText(file, "\n" + $"\nmov eax,{a[1]}\nimul eax,[{a[0]}]\nmov [{a[0]}],eax");
                                     }
                                     else if (typeperemen[isp] == "byte")
                                     {
-                                        File.AppendAllText(file, "\n" + $"\nmov bl,{a[1]}\nimul bl,{a[0]}\nmov {a[0]},eax");
+                                        File.AppendAllText(file, "\n" + $"\nmov bl,{a[1]}\nimul bl,[{a[0]}]\nmov [{a[0]}],eax");
                                     }
                                     else if (typeperemen[isp] == "word" || typeperemen[isp] == "ubyte")
                                     {
-                                        File.AppendAllText(file, "\n" + $"\nmov ax,{a[1]}\nimul ax,{a[0]}\nmov[{a[0]}],ax");
+                                        File.AppendAllText(file, "\n" + $"\nmov ax,{a[1]}\nimul ax,[{a[0]}]\nmov [{a[0]}],ax");
                                     }
                                     else if (typeperemen[isp] == "tword" || typeperemen[isp] == "qword")
                                     {
-                                        File.AppendAllText(file, "\n" + $"\nmov rax,{a[1]}\nimul rax,{a[0]}\nmov[{a[0]}],rax");
+                                        File.AppendAllText(file, "\n" + $"\nmov rax,{a[1]}\nimul rax,[{a[0]}]\nmov [{a[0]}],rax");
                                     }
                                 }
                             }
                             else
                             {
 
-                                File.AppendAllText(file, $"\nimul [{a[0]}],eax");
+                                if (isp != -1)
+                                {
+                                    if (typeperemen[isp] == "word")
+                                    {
+                                        File.AppendAllText(file, $"\nimul ax,[{a[0]}]\nmov[{a[0]}],ax");
+                                    }
+                                    else if (typeperemen[isp] == "qword")
+                                    {
+                                        File.AppendAllText(file, $"\nimul rax,[{a[0]}]\nmov[{a[0]}],rax");
+                                    }
+                                    else { File.AppendAllText(file, $"\nimul eax,[{a[0]}]\nmov[{a[0]}],eax"); }
+                                }
+                                else
+                                {
+                                    File.AppendAllText(file, $"\nimul eax,[{a[0]}]\nmov [{a[0]}],eax");
+                                }
                             }
                             return true;
                         }
@@ -570,95 +643,124 @@
                         if (!Sas.Parscall(file, a[1].TrimStart(), func, poz, peremen, typeperemen, macroses, dllfunc, true, false))
                         {
                             int isp2 = isperemen(a[1].Trim(), peremen, typeperemen);
-                        if (char.IsLetter(a[1].Trim()[0]) && a[1].TrimStart().Contains("'") == false)
-                        {
-                            if (isp2 == -1)
+                            int isp3 = isreg(a[0].Trim());
+                            if (char.IsLetter(a[1].Trim()[0]) && a[1].TrimStart().Contains("'") == false)
                             {
-                                File.AppendAllText(file, "\n" + $"idiv [{a[0]}],[{a[1]}]"); return true;
-                            }
-                        }
-                        else
-                        {
-                            if (isp2 == -1)
-                            {
-                                File.AppendAllText(file, "\n" + $"idiv [{a[0]}],{a[1]}"); return true;
-                            }
-                        }
-                        if (!helpfunc.ismacro(a[1], func, file, a[1], a[0]))
-                        {
-                            string dividendString = a[1].Trim();
-                            string divisorString = a[0].Trim();
-
-                            if (char.IsLetter(dividendString[0]) && !dividendString.Contains("'"))
-                            {
-                                if (typeperemen[isp] == "dword")
+                                if ((isp2 == -1 || isp3 == 1)&&isp==-1)
                                 {
-                                    File.AppendAllText(file, $"\nmov eax, [{dividendString}]\nmov ebx, [{divisorString}]\n" +
-                                                           "xor edx, edx\n" +
-                                                           "idiv ebx\n" +
-                                                           $"mov [{divisorString}], eax\n");
-                                }
-                                else if (typeperemen[isp] == "byte")
-                                {
-                                    File.AppendAllText(file, $"\nmov al, [{dividendString}]\nmov bl, [{divisorString}]\n" +
-                                                           "xor ah, ah\n" +
-                                                           "idiv bl\n" +
-                                                           $"mov [{divisorString}], al\n");
-                                }
-                                else if (typeperemen[isp] == "word" || typeperemen[isp] == "ubyte")
-                                {
-                                    File.AppendAllText(file, $"\nmov ax, [{dividendString}]\nmov bx, [{divisorString}]\n" +
-                                                           "xor dx, dx\n" +
-                                                           "idiv bx\n" +
-                                                           $"mov [{divisorString}], ax\n");
-                                }
-                                else if (typeperemen[isp] == "tword" || typeperemen[isp] == "qword")
-                                {
-                                    File.AppendAllText(file, $"\nmov rax, [{dividendString}]\nmov rbx, [{divisorString}]\n" +
-                                                           "xor rdx, rdx\n" +
-                                                           "idiv rbx\n" +
-                                                           $"mov [{divisorString}], rax\n");
+                                    File.AppendAllText(file, "\n" + $"idiv [{a[0]}],[{a[1]}]"); return true;
                                 }
                             }
                             else
                             {
-                                if (typeperemen[isp] == "dword")
+                                  if ((isp2 == -1 || isp3 == 1))
                                 {
-                                    File.AppendAllText(file, $"\nmov eax, {dividendString}\nmov ebx, [{divisorString}]\n" +
-                                                           "xor edx, edx\n" +
-                                                           "idiv ebx\n" +
-                                                           $"mov [{divisorString}], eax\n");
-                                }
-                                else if (typeperemen[isp] == "byte")
-                                {
-                                    File.AppendAllText(file, $"\nmov al, {dividendString}\nmov bl, [{divisorString}]\n" +
-                                                           "xor ah, ah\n" +
-                                                           "idiv bl\n" +
-                                                           $"mov [{divisorString}], al\n");
-                                }
-                                else if (typeperemen[isp] == "word" || typeperemen[isp] == "ubyte")
-                                {
-                                    File.AppendAllText(file, $"\nmov ax, {dividendString}\nmov bx, [{divisorString}]\n" +
-                                                           "xor dx, dx\n" +
-                                                           "idiv bx\n" +
-                                                           $"mov [{divisorString}], ax\n");
-                                }
-                                else if (typeperemen[isp] == "tword" || typeperemen[isp] == "qword")
-                                {
-                                    File.AppendAllText(file, $"\nmov rax, {dividendString}\nmov rbx, [{divisorString}]\n" +
-                                                           "xor rdx, rdx\n" +
-                                                           "idiv rbx\n" +
-                                                           $"mov [{divisorString}], rax\n");
+                                    File.AppendAllText(file, "\n" + $"idiv [{a[0]}],{a[1]}"); return true;
                                 }
                             }
+                            if (!helpfunc.ismacro(a[1], func, file, a[1], a[0]))
+                            {
+                                string dividendString = a[1].Trim();
+                                string divisorString = a[0].Trim();
+
+                                if (char.IsLetter(dividendString[0]) && !dividendString.Contains("'"))
+                                {
+                                    if (typeperemen[isp] == "dword")
+                                    {
+                                        File.AppendAllText(file, $"\nmov eax, [{dividendString}]\nmov ebx, [{divisorString}]\n" +
+                                                               "xor edx, edx\n" +
+                                                               "idiv ebx\n" +
+                                                               $"mov [{divisorString}], eax\n");
+                                    }
+                                    else if (typeperemen[isp] == "byte")
+                                    {
+                                        File.AppendAllText(file, $"\nmov al, [{dividendString}]\nmov bl, [{divisorString}]\n" +
+                                                               "xor ah, ah\n" +
+                                                               "idiv bl\n" +
+                                                               $"mov [{divisorString}], al\n");
+                                    }
+                                    else if (typeperemen[isp] == "word" || typeperemen[isp] == "ubyte")
+                                    {
+                                        File.AppendAllText(file, $"\nmov ax, [{dividendString}]\nmov bx, [{divisorString}]\n" +
+                                                               "xor dx, dx\n" +
+                                                               "idiv bx\n" +
+                                                               $"mov [{divisorString}], ax\n");
+                                    }
+                                    else if (typeperemen[isp] == "tword" || typeperemen[isp] == "qword")
+                                    {
+                                        File.AppendAllText(file, $"\nmov rax, [{dividendString}]\nmov rbx, [{divisorString}]\n" +
+                                                               "xor rdx, rdx\n" +
+                                                               "idiv rbx\n" +
+                                                               $"mov [{divisorString}], rax\n");
+                                    }
+                                }
+                                else
+                                {
+                                 
+                                    if (typeperemen[isp] == "dword")
+                                    {
+                                        File.AppendAllText(file, $"\nmov eax, {dividendString}\nmov ebx, [{divisorString}]\n" +
+                                                               "xor edx, edx\n" +
+                                                               "idiv ebx\n" +
+                                                               $"mov [{divisorString}], eax\n");
+                                    }
+                                    else if (typeperemen[isp] == "byte")
+                                    {
+                                        File.AppendAllText(file, $"\nmov al, {dividendString}\nmov bl, [{divisorString}]\n" +
+                                                               "xor ah, ah\n" +
+                                                               "idiv bl\n" +
+                                                               $"mov [{divisorString}], al\n");
+                                    }
+                                    else if (typeperemen[isp] == "word" || typeperemen[isp] == "ubyte")
+                                    {
+                                        File.AppendAllText(file, $"\nmov ax, {dividendString}\nmov bx, [{divisorString}]\n" +
+                                                               "xor dx, dx\n" +
+                                                               "idiv bx\n" +
+                                                               $"mov [{divisorString}], ax\n");
+                                    }
+                                    else if (typeperemen[isp] == "tword" || typeperemen[isp] == "qword")
+                                    {
+                                        File.AppendAllText(file, $"\nmov rax, {dividendString}\nmov rbx, [{divisorString}]\n" +
+                                                               "xor rdx, rdx\n" +
+                                                               "idiv rbx\n" +
+                                                               $"mov [{divisorString}], rax\n");
+                                    }
+                                }
                             }
                             else
                             {
+                                if (isp != -1)
+                                {
+                                    if (typeperemen[isp] == "word")
+                                    {
+                                        File.AppendAllText(file, $"mov bx, [{a[0]}]\n" +
+                                                         "xor dx, dx\n" +
+                                                         "idiv bx\n" +
+                                                         $"mov [{a[0]}], ax\n");
+                                    }
+                                    else if (typeperemen[isp] == "qword")
+                                    {
+                                        File.AppendAllText(file, $"mov rbx, [{a[0]}]\n" +
+                                                         "xor rdx, rdx\n" +
+                                                         "idiv rbx\n" +
+                                                         $"mov [{a[0]}], rax\n");
+                                    }
+                                    else
+                                    {
+                                        File.AppendAllText(file, $"mov ebx, [{a[0]}]\n" +
+                                                        "xor edx, edx\n" +
+                                                        "idiv ebx\n" +
+                                                        $"mov [{a[0]}], eax\n");
+                                    }
+                                }
+                                else
+                                {
+                                    File.AppendAllText(file, $"mov ebx, [{a[0]}]\n" +
+                                                            "xor edx, edx\n" +
+                                                            "idiv ebx\n" +
+                                                            $"mov [{a[0]}], eax\n");
+                                }
 
-                                File.AppendAllText(file, $"mov ebx, [{a[0]}]\n" +
-                                                          "xor edx, edx\n" +
-                                                          "idiv ebx\n" +
-                                                          $"mov [{a[0]}], eax\n");
                             }
                             return true;
                         }

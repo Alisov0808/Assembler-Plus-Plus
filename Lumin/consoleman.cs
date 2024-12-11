@@ -1,5 +1,6 @@
 ﻿using System.Diagnostics;
 using System.IO;
+using System.Text;
 
 namespace Lumin
 {
@@ -11,6 +12,8 @@ namespace Lumin
             string currentDirectory = Directory.GetCurrentDirectory().ToString();
             string temp = Directory.GetCurrentDirectory().ToString();
             List<string> list = new List<string>();
+            
+         //   Console.WriteLine(File.ReadAllText("i.bin"));
             try
             {
 
@@ -25,7 +28,7 @@ namespace Lumin
                     }
                     if (a == "help")
                     {
-                        Console.WriteLine("\n----------\ncomp [название файла] - для компиляции\ncls - для очистки экрана\ndir - для просмота файлов и папок в текущей дериктории\ncd [директория] - сменить директорию\n----------\n");
+                        Console.WriteLine("\n----------\ncomp [название файла] - для компиляции\ncls - для очистки экрана\ndir - для просмота файлов и папок в текущей дериктории\ncd [директория] - сменить директорию\ncodecnsl - открывает возможность писать код в консоли\nexitcnsl - codecnsl - закрывает возможность писать код в консоли и запускает программу\n----------\n");
                     }
                     if (a == "cls")
                     {

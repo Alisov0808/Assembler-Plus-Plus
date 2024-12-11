@@ -13,7 +13,7 @@
             {
 
 
-
+               
                 int count = commands.Count();
 
                 List<string> result = new List<string>();
@@ -21,25 +21,29 @@
                 foreach (var command in commands)
                 {
 
-                    var parsedResults
+                                       if (!command.Replace(" ", null).StartsWith("#"))
+                    { var parsedResults
                     = helpfunc.ParseCommands(command);
-                    result.AddRange(parsedResults);
+
+                        result.AddRange(parsedResults);
+                    }
                 }
                 commands = result;
                 for (int i = 0; i < count; i++)
                 {
+                    
                     commands[i] = helpfunc.TrimOutsideQuotes(commands[i]);
-                    if (commands[i].TrimStart().StartsWith("template"))
-                    {
+                    //if (commands[i].TrimStart().StartsWith("template"))
+                    //{
 
-                        className = commands[i].Trim().Substring(8).Trim();
-                        cls = className.Replace(" ", null);
+                    //    className = commands[i].Trim().Substring(8).Trim();
+                    //    cls = className.Replace(" ", null);
 
-                        classn.Add(className.Trim());
+                    //    classn.Add(className.Trim());
 
 
-                        //  //Console.WriteLine($";classf {className} starts");
-                    }
+                    //    //  //Console.WriteLine($";classf {className} starts");
+                    //}
 
                     count = result.Count();
                     ////// скобочки это вапапвпвкпвкпв
@@ -64,7 +68,7 @@
 
                         string res = commands[i].TrimStart().Substring(7);
                         string[] a = res.Split(',', 2);
-
+                       
                         define.Add(a[0]);
                         watdefine.Add(a[1]);
                     }
@@ -282,7 +286,7 @@
 
                         pointof.Add(i);
                         outputLines.Add($"\n;class {className} starts\n");
-                        continue;
+                      
                         //  //Console.WriteLine($";classf {className} starts");
                     }
 

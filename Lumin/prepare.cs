@@ -60,8 +60,8 @@
                 if (iny2 && lines5[i2].TrimStart().StartsWith("jmp endOasm") || lines5[i2].TrimStart().StartsWith("\njmp endOasm")) { iny2 = false; }
                 if (!iny2 && wased2 && preor[preor.Count() - 1] == "proc")
                 {
-                    if (ismain) lines5[i2] = "\n  mov     esp, ebp\npop ebp\nret\nendp";
-                    else lines5[i2] = "\n  mov     esp, ebp\npop ebp\nret\nendp";
+                    if (ismain) lines5[i2] = "\nret\nendp";
+                    else lines5[i2] = "\nret\nendp";
 
                     wased2 = false;
                     inmacro = false; preor.RemoveAt(preor.Count() - 1);  
@@ -101,7 +101,12 @@
                 //}
                 if (lines5[i2].TrimStart().StartsWith(".else"))
                 {
-                    lines5[i2 - 1] = "";  
+                    int u = i2;
+                    while (lines5[u]!=".endif")
+                    {
+                        u--;
+                    }
+                    lines5[u] = "";  
                 }
 
 

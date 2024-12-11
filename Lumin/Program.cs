@@ -1,5 +1,6 @@
 using Lumin;
 using System.Diagnostics;
+using System.Diagnostics.SymbolStore;
 using System.Runtime;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -60,7 +61,57 @@ public unsafe class Sas
             { "r15", "qword" }
         };
 
+    static public List<string> registerscop = new List<string>
+        {
+            { "eax"},
+            { "ebx" },
+            { "ecx" },
+            { "edx" },
+            { "esi" },
+            { "edi" },
+            { "ebp" },
+            { "esp" },
+            { "eip" },
 
+            // 8-битные регистры
+            { "al"  },
+            { "ah"  },
+            { "bl"  },
+            { "bh"  },
+            { "cl"  },
+            { "ch"  },
+            { "dl"  },
+            { "dh"  },
+
+            // 16-битные регистры
+            { "ax"  },
+            { "bx"  },
+            { "cx"  },
+            { "dx"  },
+            { "si"  },
+            { "di"  },
+            { "bp"  },
+            { "sp"  },
+
+            // 64-битные регистры (на архитектуре x86-64)
+            { "rax"  },
+            { "rbx"  },
+            { "rcx"  },
+            { "rdx"  },
+            { "rsi"  },
+            { "rdi"  },
+            { "rbp"  },
+            { "rsp"  },
+            { "rip"  },
+            { "r8"   },
+            { "r9"   },
+            { "r10"  },
+            { "r11"  },
+            { "r12"  },
+            { "r13"  },
+            { "r14"  },
+            { "r15"  }
+        };
     public string Interpret(string command)
     {
         return command;
@@ -80,9 +131,10 @@ public unsafe class Sas
             Main2();
         }
     }
+   static public List<string> peremen = new List<string>();
     static void Main2(string args = null, string close8 = "")
     {
-
+       
         bool close2 = false;
         if (close8 == "y")
         {
@@ -90,7 +142,6 @@ public unsafe class Sas
         }
         string className = "";
         bool inClass = false;
-        // Для хранения обработанного класса
         int lastMatchIndex = 0;
         string text2 = null;
         bool boot = false;
@@ -119,11 +170,11 @@ public unsafe class Sas
         bool was = false;
         int last = 0;
         int realpoz = 0;
-
+      
 
         List<string> func = new List<string>();
         List<string> struc = new List<string>();
-        List<string> peremen = new List<string>();
+     
         List<string> typeperemen = new List<string>();
         List<string> macroses = new List<string>();
         List<string> dllfunc = new List<string>();
@@ -147,11 +198,11 @@ public unsafe class Sas
         List<string> classn = new List<string>();
         List<string> whatin = new List<string>();
 
-        //foreach (var reg in registers)
-        //{
-        //    peremen.Add(reg.Key);
-        //    typeperemen.Add(reg.Value);
-        //}
+        foreach (var person in registers)
+        {
+            peremen.Add(person.Key);
+            typeperemen.Add(person.Value);
+        }
 
         stopwatch.Start();
         string cls = "";
@@ -198,12 +249,12 @@ public unsafe class Sas
         string mode = "";
         bool wasbrk = false;
         string realcommandto = "";
-
+        bool proccap = false;
 
 
         foreach (string command in outputLines)
         {
-           realcommandto = command;
+           realcommandto = command.TrimStart();
 
             poz++;
             realpoz++;
@@ -215,17 +266,21 @@ public unsafe class Sas
                 //    g.ParsIf(realcommandto, poz, file, inputFilePath, func, errorcount);
 
                 //}
-                if (realcommandto.TrimStart().StartsWith("undefine "))
+                if (realcommandto.StartsWith("define ")) {
+                    string res = realcommandto.TrimStart().Substring(7);
+                    string[] a = res.Split(',', 2); File.AppendAllText(file, $"\n;lumdefine {a[0]},{a[1]}"); 
+                }
+                if (realcommandto.StartsWith("undefine "))
                 {
                     for (int u = 0; u < other.define.Count(); u++)
                     {
                         Console.WriteLine(other.define[u] + " f");
                         if (other.define[u] == realcommandto.Substring(9).Trim())
                         {
-
+                             File.AppendAllText(file, $";lumundefine {realcommandto.Substring(9).Trim()}");
                             other.define.RemoveAt(u);
                             other.watdefine.RemoveAt(u);
-
+                          
                         }
                     }
                 }
@@ -233,12 +288,12 @@ public unsafe class Sas
                 {
                     // Console.WriteLine(define[u] + " f");
                     string pattern = @"(?<!['""])\b" + Regex.Escape(other.define[u]) + @"\b(?!['""])";
-
+                    if (realcommandto.TrimStart().StartsWith("char ")&& !realcommandto.TrimEnd().EndsWith(",0")&&(realcommandto.TrimEnd().EndsWith("\"")|| realcommandto.TrimEnd().EndsWith("'"))) { realcommandto+=",0"; }
                     realcommandto = Regex.Replace(realcommandto, pattern, other.watdefine[u]);
 
                 }
 
-                if (realcommandto.TrimStart().StartsWith("label "))
+                if (realcommandto.StartsWith("label "))
                 {
                     string command2 = realcommandto;
                     string isp = null;
@@ -279,10 +334,10 @@ public unsafe class Sas
                     }
                     continue;
                 }
-                else if (realcommandto.TrimStart().StartsWith("while "))
+                else if (realcommandto.StartsWith("while "))
                 {
                     lastwhile++;
-                    If_and_loop.ParsIf(realcommandto.TrimStart(), poz, file, inputFilePath, func, errorcount, true);
+                    If_and_loop.ParsIf(realcommandto.TrimStart(), poz, file, inputFilePath, func, errorcount, true, dllfunc, macroses, stringstoaddend, stringlasted, peremen, typeperemen);
                     brasecouwhile++;
                     //File.AppendAllText(file, $"\n.loopLC00h7{realpoz}:\n");
                     //If_and_loop.Parswhile(realcommandto, poz, file, inputFilePath, func, errorcount);
@@ -307,7 +362,7 @@ public unsafe class Sas
                     //File.AppendAllText(file, $"\njmp .whileLC025{lastwhile}\n.loopLC00h7{realpoz}:\n");
                     inwhile = true; continue;
                 }
-                else if (realcommandto.TrimStart().StartsWith("dowhile "))
+                else if (realcommandto.StartsWith("dowhile "))
                 {
                     lastwhile++;
                     File.AppendAllText(file, "\n.dowhile");
@@ -318,14 +373,14 @@ public unsafe class Sas
 
                     indowhile = true; continue;
                 }
-                else if (realcommandto.TrimStart().StartsWith("if "))
+                else if (realcommandto.StartsWith("if "))
                 {
                     preorityloop.Add("if");
 
                     lastif++;
                     brasecouif++;
                     preorityloopindex.Add(lastif);
-                    If_and_loop.ParsIf(realcommandto.TrimStart(), poz, file, inputFilePath, func, errorcount, false);
+                    If_and_loop.ParsIf(realcommandto.TrimStart(), poz, file, inputFilePath, func, errorcount, false, dllfunc, macroses, stringstoaddend, stringlasted, peremen, typeperemen);
                     //File.AppendAllText(file, $"\n.looopLC00h7{realpoz}:\n");
                     //If_and_loop.Parswhile("while " + realcommandto.TrimStart().Substring(3), poz, file, inputFilePath, func, errorcount);
                     //List<string> lines = File.ReadAllLines(file).ToList();
@@ -343,14 +398,14 @@ public unsafe class Sas
                     //File.AppendAllText(file, $"\njmp .whileLC025{lastif}\n.looopLC00h7{realpoz}:\n");
                     inif = true; continue;
                 }
-                else if (realcommandto.TrimStart().StartsWith("else"))
+                else if (realcommandto.StartsWith("else"))
                 {
                     preorityloop.Add("if");
 
                     lastif++;
                     brasecouif++;
                     preorityloopindex.Add(lastif);
-                    If_and_loop.ParsIf(realcommandto.TrimStart(), poz, file, inputFilePath, func, errorcount, false);
+                    If_and_loop.ParsIf(realcommandto.TrimStart(), poz, file, inputFilePath, func, errorcount, false,dllfunc,macroses,stringstoaddend,stringlasted,peremen,typeperemen);
                     //File.AppendAllText(file, $"\n.looopLC00h7{realpoz}:\n");
                     //If_and_loop.Parswhile("while " + realcommandto.TrimStart().Substring(3), poz, file, inputFilePath, func, errorcount);
                     //List<string> lines = File.ReadAllLines(file).ToList();
@@ -368,7 +423,7 @@ public unsafe class Sas
                     //File.AppendAllText(file, $"\njmp .whileLC025{lastif}\n.looopLC00h7{realpoz}:\n");
                     inif = true; continue;
                 }
-                else if (realcommandto.TrimStart().StartsWith("foreach "))
+                else if (realcommandto.StartsWith("foreach "))
                 {
                     inforeach = true;
                     preorityloop.Add("foreach");
@@ -385,7 +440,7 @@ public unsafe class Sas
                     else if (typeperemen[isp] == "dword") File.AppendAllText(file, $"\nlea edx, [{a[1]} + 4 * ebx]\r\n mov eax,[edx] \n  mov [{a[0]}],eax"); 
                     continue;
                 }
-                else if (realcommandto.TrimStart().StartsWith("for "))
+                else if (realcommandto.StartsWith("for "))
                 {
                     preorityloop.Add("for");
                     lastfor++;
@@ -411,6 +466,7 @@ public unsafe class Sas
                 }
                 else if (realcommandto.Trim().StartsWith("}"))
                 {
+                    
                     if (instrict) { instrict = false; }
                     if (inforeach && preorityloop[preorityloop.Count - 1] == "foreach")
                     {
@@ -477,7 +533,7 @@ public unsafe class Sas
                         // string[] lines = File.ReadAllLines(file);
                         // string a = null;
                         string a = watcondo[watcondo.Count() - 1].TrimStart();
-                        If_and_loop.ParsIf("enddw " + a, poz, file, inputFilePath, func, errorcount, true);
+                        If_and_loop.ParsIf("enddw " + a, poz, file, inputFilePath, func, errorcount, true, dllfunc, macroses, stringstoaddend, stringlasted, peremen, typeperemen);
                         watcondo.RemoveAt(watcondo.Count() - 1);
                         brasecoudowhile--;
                         if (brasecoudowhile == 0) indowhile = false;
@@ -548,7 +604,7 @@ public unsafe class Sas
                     }
                     else
                     {
-
+                        types.cou = 0;
                         int currentPosition = poz;
                         var lines = File.ReadAllLines(inputFilePath);
                         string fileContent = File.ReadAllText(file);
@@ -561,7 +617,7 @@ public unsafe class Sas
                         }
                     }
                 }
-                else if (realcommandto.TrimStart().StartsWith("struct "))
+                else if (realcommandto.StartsWith("struct "))
                 {
                     instrict = true;
                     var lines = File.ReadAllLines(inputFilePath);
@@ -569,12 +625,12 @@ public unsafe class Sas
                     File.AppendAllText(file, "\n" + realcommandto.Replace("struct ".Trim(), "struc ")); continue;
 
                 }
-                else if (realcommandto.TrimStart().StartsWith("inter "))
+                else if (realcommandto.StartsWith("inter "))
                 {
                     string[] parts = realcommandto.TrimStart().Split(new char[] { ' ' }, 2, StringSplitOptions.RemoveEmptyEntries);
                     File.AppendAllText(file, "\nINT " + parts[1]); continue;
                 }
-                else if (realcommandto.TrimStart().StartsWith("import "))
+                else if (realcommandto.StartsWith("import "))
                 {
                     try
                     {
@@ -647,7 +703,17 @@ public unsafe class Sas
                                 {
                                     func.Add(command3[i1].Substring(6).Trim());
                                 }
+                                else if (command3[i1].TrimStart().StartsWith(";lumdefine ")) 
+                                {
+
+                                    string res = command3[i1].TrimStart().Substring(11);
+                                    string[] a = res.Split(',', 2);
+
+                                    other.define.Add(a[0]);
+                                    other.watdefine.Add(a[1]);
                                 }
+                                
+                            }
                                 continue;
                         }
                         else
@@ -674,7 +740,7 @@ public unsafe class Sas
                     }
 
                 }
-                else if (realcommandto.TrimStart().StartsWith("dllimport "))
+                else if (realcommandto.StartsWith("dllimport "))
                 {
                     string a = realcommandto.TrimStart().Substring(10).Replace(" ", null);
                     string[] b = a.Trim().Split(',');
@@ -694,16 +760,16 @@ public unsafe class Sas
                     }
                     continue;
                 }
-                else if (realcommandto.TrimStart().StartsWith("proc "))
+                else if (realcommandto.StartsWith("proc "))
                 {
-
-                    File.AppendAllText(file, $"\n {realcommandto.TrimStart().Substring(5).Insert(0, "proc ").Replace("(", " ").Replace(" as "," :").Replace(")", null)}\n push    ebp\r\n        mov     ebp, esp");
+                    if (instrict) { }
+                    File.AppendAllText(file, $"\n {realcommandto.TrimStart().Substring(5).Insert(0, "proc ").Replace("(", " ").Replace(" as "," :").Replace(")", null)}");
                     string[] spl = realcommandto.Replace("dword ", null).Replace("word ", null).Split("proc", 2);
                     string[] macro = spl[1].Split('(');
                     func.Add($"{macro[0].Trim()}"); continue;
                     // Console.WriteLine($"{macro[0].Trim()}" + "fdfsdfsdfsdfsd");
                 }
-                else if (realcommandto.TrimStart().StartsWith("macro "))
+                else if (realcommandto.StartsWith("macro "))
                 {
 
                     File.AppendAllText(file, $"\n {realcommandto.TrimStart().Substring(6).Insert(0, "macro ").Replace("(", " ").Replace(")", null)}");
@@ -712,7 +778,7 @@ public unsafe class Sas
                     macroses.Add($"{macro[0].Trim()}"); continue;
                     //  Console.WriteLine($"{macro[0].Trim()}" + "fdfsdfsdfsdfsd");
                 }
-                else if (realcommandto.TrimStart().StartsWith("delete "))
+                else if (realcommandto.StartsWith("delete "))
                 {
                     string[] sp = realcommandto.TrimStart().Substring(7).Split(',', 2);
 
@@ -723,7 +789,7 @@ public unsafe class Sas
                     File.AppendAllText(file, $"\nadd esp,{sp[1]}"); continue;
 
                 }
-                else if (realcommandto.TrimStart().StartsWith("func "))
+                else if (realcommandto.StartsWith("func "))
                 {
                     string command2 = realcommandto.Replace("func ", "");
                     string isp = null;
@@ -736,11 +802,11 @@ public unsafe class Sas
                     func.Add(command2.Replace(" ", "").Trim()); continue;
 
                 }
-                else if (realcommandto.TrimStart().StartsWith("defbyte "))
+                else if (realcommandto.StartsWith("defbyte "))
                 {
                     File.AppendAllText(file, realcommandto.TrimStart().Replace("defbyte ", " db ")); continue;
                 }
-                else if (realcommandto.TrimStart().StartsWith("format "))
+                else if (realcommandto.StartsWith("format "))
                 {
                     string[] k = realcommandto.TrimStart().Split(" ");
                     if (k[1].Trim() == "winconsole".Trim()) { File.AppendAllText(file, "\nformat PE Console\n\ninclude 'fasm\\INCLUDE\\MACRO\\PROC32.INC'\n\ninclude 'fasm\\INCLUDE\\win32a.INC'\nentry main\njmp main\nformatString00 db \"%s\", 0\ncls000 db 'cls',0\nmacro allocatem size\ninvoke malloc,size\n}\nmacro freem size\ninvoke free,size\n}"); console = true; macroses.Add("allocatem"); macroses.Add("freem"); }
@@ -762,6 +828,10 @@ public unsafe class Sas
                         nonos = true;
 
                     }
+                    else if (k[1].Trim() == "none".Trim())
+                    {
+                        File.AppendAllText(file, "\ninclude 'fasm\\INCLUDE\\MACRO\\PROC32.INC'\n include 'fasm\\INCLUDE\\MACRO\\import32.INC' \njmp main");
+                    }
                     else { File.AppendAllText(file, "\n" + realcommandto.TrimStart() + "\ninclude 'fasm\\INCLUDE\\MACRO\\PROC32.INC'\n include 'fasm\\INCLUDE\\MACRO\\import32.INC' \njmp main"); }
                     File.AppendAllText(file, "\n" + "bytesz equ 1\nwordsz equ 2\ndwordsz equ 4\ninclude 'fasm/include/macro/if.inc'"); continue;
 
@@ -777,7 +847,7 @@ public unsafe class Sas
                     mode = "64";
                     File.AppendAllText(file, "\nuse64"); continue;
                 }
-                else if (realcommandto.TrimStart().StartsWith("comparestr "))
+                else if (realcommandto.StartsWith("comparestr "))
                 {
                     string command21 = realcommandto.Replace("comparestr ", "");
                     string isp1 = null;
@@ -798,7 +868,7 @@ public unsafe class Sas
                     last++;
                     continue;
                 }
-                else if (realcommandto.TrimStart().StartsWith("sector ") && !realcommandto.TrimStart().StartsWith("sector end"))
+                else if (realcommandto.StartsWith("sector ") && !realcommandto.StartsWith("sector end"))
                 {
                     string[] parts = realcommandto.TrimStart().Split(' ', 2, StringSplitOptions.RemoveEmptyEntries);
                     if (parts.Length == 2)
@@ -810,17 +880,17 @@ public unsafe class Sas
                     }
                     continue;
                 }
-                else if (realcommandto.TrimStart().StartsWith("sector end"))
+                else if (realcommandto.StartsWith("sector end"))
                 {
                     boot = true;
                     ferifyboot = true;
 
                 }
-                else if (realcommandto.TrimStart().StartsWith("locals"))
+                else if (realcommandto.StartsWith("locals"))
                 {
                     File.AppendAllText(file, "\nlocals"); continue;
                 }
-                else if (realcommandto.TrimStart().StartsWith("reserve"))
+                else if (realcommandto.StartsWith("reserve"))
                 {
                     string[] parts = realcommandto.TrimStart().Split(new char[] { ' ' }, 2, StringSplitOptions.RemoveEmptyEntries);
                     string[] t = parts[1].Split(new char[] { ',' }, 2, StringSplitOptions.RemoveEmptyEntries);
@@ -837,7 +907,7 @@ public unsafe class Sas
                     File.AppendAllText(file, parsed); continue;
 
                 }
-                else if (realcommandto.TrimStart().StartsWith("savestack"))
+                else if (realcommandto.StartsWith("savestack"))
                 {
                     string[] prt = realcommandto.TrimStart().Split(" ");
                     bool a = false;
@@ -857,7 +927,7 @@ public unsafe class Sas
                     continue;
 
                 }
-                else if (realcommandto.TrimStart().StartsWith("restorestack"))
+                else if (realcommandto.StartsWith("restorestack"))
                 {
                     string[] prt = realcommandto.TrimStart().Split(" ");
                     bool a = false;
@@ -877,235 +947,54 @@ public unsafe class Sas
                     continue;
 
                 }
-                else if (realcommandto.TrimStart().StartsWith("crttemp"))
-                {
-                    int ied = 0;
-                    int pointof2 = 0;
-                    bool pop = false;
-                    string[] srtc = realcommandto.TrimStart().Split(' ', 2);
-                    string[] srtc2 = srtc[1].TrimStart().Split(',', 2);
-                    string[] p = srtc2[1].Split("(", 2);
-                    List<string> all = p[0].Split(',').ToList();
-                    string[] fil = File.ReadAllLines(file);
-                    List<string> resultLines = new List<string>();
-                    for (int i = 0; i < classn.Count; i++)
-                    {
-                        if (srtc2[0].TrimStart().StartsWith(classn[i].TrimStart()) && !int.TryParse(srtc2[1].Trim().Substring(0, srtc2[1].Trim().Length - 1), out int y))
-                        {
-
-
-
-                            for (int ia = 0; ia < fil.Count() - 1; ia++)
-                            {
-                                // Console.WriteLine("ddd");
-                                if (ia == i)
-                                {
-
-                                    pointof2 = i;
-                                    string[] lines = File.ReadAllLines(file);
-
-                                    bool isCapturing = false;
-
-                                    foreach (string line in lines)
-                                    {
-
-                                        string trimmedLine = line;
-
-                                        // Console.WriteLine(trimmedLine);
-                                        if (trimmedLine.StartsWith($";class {classn[i]}"))
-                                        {
-
-
-                                            isCapturing = true;
-                                            resultLines.Add(trimmedLine);
-                                            continue;
-                                        }
-                                        else if (isCapturing && trimmedLine.TrimStart().StartsWith("proc "))
-                                        {
-
-                                            var methodName = trimmedLine.TrimStart().Substring(6);
-
-                                            string[] spl = trimmedLine.Split("proc", 2);
-                                            string[] macro = methodName.Split(' ', 2);
-                                            func.Add($"{macro[0].Trim().Replace($"{classn[i]}.", $"{all[all.Count() - 1]}.")}");
-                                            // Console.WriteLine(all[all.Count() - 1]);
-                                            // Console.WriteLine("ddasdasdasdasdd " + $"{macro[0].Trim().Replace($"{classn[i]}.", $"{srtc[1]}.")}");
-                                            //  whatin.Add($"\nfunc {className}.{methodName}");
-
-                                        }
-                                        else if (isCapturing && trimmedLine.TrimStart().StartsWith("macro "))
-                                        {
-
-                                            var methodName = trimmedLine.TrimStart().Substring(6);
-
-                                            string[] spl = trimmedLine.Split("macro", 2);
-                                            string[] macro = methodName.Split(' ', 2);
-                                            macroses.Add($"{macro[0].Trim().Replace($"{classn[i]}.", $"{all[all.Count() - 1]}.")}");
-                                            // Console.WriteLine("ddasdasdasdasdd " + $"{macro[0].Trim().Replace($"{classn[i]}.", $"{srtc[1]}.")}");
-                                            //  whatin.Add($"\nfunc {className}.{methodName}");
-
-                                        }
-                                        else if (isCapturing && trimmedLine.TrimStart().EndsWith(":"))
-                                        {
-
-                                            var methodName = trimmedLine.Trim();
-
-                                            func.Add($"{methodName.Replace(":", null).Replace($"{classn[i]}.", $"{all[all.Count() - 1]}.")}");
-
-
-
-                                            // Console.WriteLine($"hh {methodName.Replace(":", null).Replace($"{classn[i]}.", $"{srtc[1]}.")}");
-                                        }
-                                        if (isCapturing)
-                                        {
-                                            if (trimmedLine.StartsWith($";class ends"))
-                                            {
-                                                // Console.WriteLine($";class ends");
-                                                resultLines.Add(trimmedLine);
-                                                pop = true;
-
-                                                break;
-                                            }
-                                            resultLines.Add(trimmedLine);
-
-
-                                        }
-                                    }
-
-
-
-
-
-                                }
-
-                            }
-
-                        }
-                        //else { File.AppendAllText(file, "\n" + srtc[1] + " " + srtc[0]);
-                        // Console.WriteLine("dddddddddddddddddddddddddddddddddddddddddddddddddddddddd"); 
-                        // }
-                        fil = File.ReadAllLines(file);
-                        int f = 0;
-                        int f4 = 0;
-
-                        for (int f1 = 0; f1 < fil.Count(); f1++)
-                        {
-                            if (fil[f1].TrimStart().StartsWith($";class ends"))
-                            {
-                                f = f1;
-                                break;
-                            }
-                            if (fil[f1].TrimStart().StartsWith($";point"))
-                            {
-                                f4 = f1;
-                                break;
-                            }
-                        }
-                        for (int j = 0; j < resultLines.Count; j++)
-                        {
-                            if (pop)
-                            {
-                                // Console.WriteLine($"{classn[i].Replace(" ", null)}.");
-                                fil[f + 1] = fil[f + 1] + "\n" + resultLines[j].Replace($"{classn[i].Replace(" ", null)}.", $"{all[all.Count() - 1].Replace(" ", null).Replace("(", null).Replace(")", null)}.").Replace($";class {classn[i]}", $";class {all[all.Count() - 1].Replace("(", null).Replace(")", null).Replace(" ", null)}");
-                                // Console.WriteLine("f" + fil[f]);
-                            }
-                        }
-
-                    }
-                    for (int j = 0; j < fil.Count(); j++)
-                    {
-                        if (j == fil.Count() - 1 && pop)
-                        {
-
-                            int openBracketIndex = srtc[1].IndexOf('(');
-                            int closeBracketIndex = srtc[1].Trim().IndexOf(')');
-                            int commaIndex = srtc[1].IndexOf(',');
-
-                            string[] a = srtc[1].Split(",", 2);
-                            string parameters = srtc[1].Substring(openBracketIndex).Trim();
-
-                            string[] constructor = a[1].Split("(", 2);
-                            string result = null;
-
-                            string[] parts = parameters.Trim().Substring(1, parameters.Length - 2).Split(',');
-                            if (parameters.Contains(","))
-                            {
-                                for (int i = 0; i < parts.Length; i++)
-                                {
-                                    parts[i] = helpfunc.parsstring(parts[i], true,stringstoaddend,stringlasted);
-                                    if (char.IsLetter(parts[i].Trim()[0]) && parts[i].Trim() != "" && parts[i].Trim() != "''" && !parts[i].Trim().StartsWith("'") && !parts[i].Trim().StartsWith("\"") && parts[i].Trim() != "''" && parts[i].Trim() != "\"\"")
-                                    { parts[i] = $"[{parts[i]}]"; }
-
-                                }
-                                string g = string.Join(",", parts);
-
-                                result = $"\nstdcall {constructor[0].Replace(" ", null).Replace("(", null).Replace(")", null)}.constructing,{g}";
-                            }
-                            else
-                            {
-                                result = $"\nstdcall {constructor[0].Replace(" ", null).Replace("(", null).Replace(")", null)}.constructing";
-                            }
-
-
-                            fil[j] += result;
-
-                            break;
-                        }
-                    }
-
-                    File.WriteAllLines(file, fil);
-                    classn.Add(all[all.Count() - 1].Replace("(", null).Replace(")", null).Replace(" ", null));
-                    continue;
-                }
-                else if (realcommandto.TrimStart().StartsWith("return "))
+                else if (realcommandto.StartsWith("return"))
                 {
                     string pattern = @"\d+";
-                    if (realcommandto.Trim() == "return")
+                    if (realcommandto.Trim().Replace(" ",null) == "return")
                     {
                         File.AppendAllText(file, "\n" + $"ret");
                     }
                     else
                     {
                         string[] prt = realcommandto.Split(" ", 2, StringSplitOptions.RemoveEmptyEntries);
-                        bool containsNumbers = false;
-                        try
-                        {
-                            containsNumbers = Regex.IsMatch(prt[1], pattern);
-                        }
-                        catch { }
+                      
 
-                        if (char.IsLetter(prt[1].TrimStart()[0]))
+                        if (!Parscall(file, prt[1], func, realpoz, peremen, typeperemen, macroses, dllfunc, true, false))
                         {
-                            File.AppendAllText(file, "\n" + $"mov eax,[{prt[1]}]\nret");
+                            if (char.IsLetter(prt[1].TrimStart()[0]))
+                            {
+                                File.AppendAllText(file, "\n" + $"mov eax,[{prt[1]}]\nret");
+                            }
+                            else { File.AppendAllText(file, "\n" + $"mov eax,{prt[1]}\nret"); }
                         }
                         else
                         {
-                            Parscall(file, prt[1], func, realpoz, peremen, typeperemen, macroses, dllfunc, true, false);
-                            File.AppendAllText(file, "\n" + $"mov eax,{prt[1]}\nret");
-                            break;
+                          
+                            File.AppendAllText(file, "\n" + $"ret");
+                            
                         }
 
 
                     }
                     continue;
                 }
-                else if (realcommandto.TrimStart().StartsWith("locallabel "))
+                else if (realcommandto.StartsWith("locallabel "))
                 {
                     File.AppendAllText(file, "\nlocal " + realcommandto.TrimStart().Substring(10)); continue;
                 }
-                else if (realcommandto.TrimStart().StartsWith("initproc "))
+                else if (realcommandto.StartsWith("initproc "))
                 {
                     func.Add(realcommandto.TrimStart().Substring(9).Trim()); continue;
                 }
-                else if (realcommandto.TrimStart().StartsWith("initdllfunc "))
+                else if (realcommandto.StartsWith("initdllfunc "))
                 {
                     dllfunc.Add(realcommandto.TrimStart().Substring(12).Trim()); continue;
                 }
-                else if (realcommandto.TrimStart().StartsWith("initmacro "))
+                else if (realcommandto.StartsWith("initmacro "))
                 {
                     macroses.Add(realcommandto.TrimStart().Substring(10).Trim()); continue;
                 }
-                else if (command.TrimStart().StartsWith("entrypoint"))
+                else if (command.StartsWith("entrypoint"))
                 {
                     string[] parts = command.TrimStart().Split(new char[] { ' ' }, 2, StringSplitOptions.RemoveEmptyEntries);
                     File.AppendAllText(file, "\n" + "entry " + parts[1]); continue;
@@ -1115,7 +1004,7 @@ public unsafe class Sas
                     File.AppendAllText(file, "\n" + $"jmp endOasm");
                     continue;
                 }
-                else if (realcommandto.TrimStart().StartsWith("loop "))
+                else if (realcommandto.StartsWith("loop "))
                 {
                     If_and_loop.ParsLoop(realcommandto, poz, file, inputFilePath, func, errorcount); continue;
                 }
@@ -1124,7 +1013,7 @@ public unsafe class Sas
                     wasassemb = true;
                     continue;
                 }
-                else if (realcommandto.TrimStart().StartsWith("crtstruc"))
+                else if (realcommandto.StartsWith("crtstruc"))
                 {
                     string[] srtc = realcommandto.TrimStart().Split(new char[] { ' ' }, 2, StringSplitOptions.RemoveEmptyEntries);
                     string[] srtc2 = srtc[1].TrimStart().Split(new char[] { ',' }, 2, StringSplitOptions.RemoveEmptyEntries);
@@ -1132,12 +1021,12 @@ public unsafe class Sas
                     File.AppendAllText(file, $"\n {srtc2[1]} {srtc2[0]}");
                     continue;
                 }
-                else if (realcommandto.TrimStart().StartsWith("goto "))
+                else if (realcommandto.StartsWith("goto "))
                 {
                     string h = realcommandto.TrimStart().Substring(5);
                     File.AppendAllText(file, "\njmp " + h); continue;
                 }
-                else if (realcommandto.TrimStart().StartsWith("dword") || realcommandto.TrimStart().StartsWith("stack ") || realcommandto.TrimStart().StartsWith("word") || realcommandto.TrimStart().StartsWith("tword") || realcommandto.TrimStart().StartsWith("qword") || realcommandto.TrimStart().StartsWith("byte") || realcommandto.TrimStart().StartsWith("ubyte"))
+                else if (realcommandto.StartsWith("dword") || realcommandto.StartsWith("stack ") || realcommandto.StartsWith("word") || realcommandto.TrimStart().StartsWith("tword") || realcommandto.TrimStart().StartsWith("qword") || realcommandto.TrimStart().StartsWith("byte") || realcommandto.TrimStart().StartsWith("ubyte"))
                 {
                     types.ParsTypes(realcommandto, file, peremen, typeperemen, func, macroses, errorcount, errorcount, laststack, instrict, dllfunc,stringstoaddend,stringlasted);
                     continue;
@@ -1163,42 +1052,9 @@ public unsafe class Sas
                 //    st = wccommands.Parsccom(realcommandto, file, inputFilePath, last, linconsole, boot, console, realpoz, errorcount, wingui);
 
                 //}
-                else if (!realcommandto.TrimStart().StartsWith("*") && !realcommandto.TrimStart().StartsWith("define") && !realcommandto.Trim().EndsWith("\n{"))
+                else if (!realcommandto.StartsWith("*") && !realcommandto.StartsWith("define") && !realcommandto.Trim().EndsWith("\n{"))
                 {
-                    bool chek = Parscall(file, realcommandto, func, realpoz, peremen, typeperemen, macroses, dllfunc, false, true);
-                    if (!chek)
-                    {
-                        for (int i = 0; i < dllfunc.Count; i++)
-                        {
-                            if (realcommandto.TrimStart() == dllfunc[i] + " ")
-                            {
-
-                                File.AppendAllText(file, "\ninvoke" + realcommandto);
-                                break;
-                            }
-                        }
-
-                        for (int i = 0; i < func.Count; i++)
-                        {
-
-                            if (realcommandto.TrimStart() == func[i])
-                            {
-                                File.AppendAllText(file, "\nstdcall " + realcommandto);
-                                break;
-                            }
-                        }
-
-                        for (int i = 0; i < macroses.Count(); i++)
-                        {
-
-                            if (realcommandto.TrimStart() == macroses[i])
-                            {
-
-                                File.AppendAllText(file, "\n" + realcommandto);
-                                break;
-                            }
-                        }
-                    }
+                    Parscallc(file, realcommandto, func, realpoz, peremen, typeperemen, macroses, dllfunc, false, true);
                     continue;
                 }
 
@@ -1228,17 +1084,28 @@ public unsafe class Sas
             string pattern = @"(?<!['""])\b" + Regex.Escape(define) + @"\b(?!['""])";
             patterns.Add(pattern);
         }
-
+        
+        string[] types1 = { "dword","word","byte","qword","tword"};
         for (int i = 0; i < lst.Length; i++)
+
         {
+            string registerPattern = string.Join("|", registerscop);
+            string pattern = @$"(?<![""'`])\s*\[\s*(\b(?:{registerPattern})\b)\s*\]";
+int lastdel = 0;
+
+            lst[i] = Regex.Replace(helpfunc.RemoveExtraSpaces(lst[i]), pattern, m => $" [ {m.Groups[1].Value}@]");
+           List<string> pop = new List<string>();
+            bool waswh = false;
             for (int u = 0; u < other.definestack.Count; u++)
             {
                 int cou = Parser.isperemen(other.definestack[u], peremen, typeperemen);
-                if (Regex.IsMatch(lst[i].Trim(), patterns[u]))
-                {
-                    lst[i] = Regex.Replace(lst[i], patterns[u], typeperemen[cou] + " " + other.watdefinestack[u]);
+                if (Regex.IsMatch(helpfunc.RemoveExtraSpaces(lst[i]), patterns[u]))
+                {pop.Add(other.definestack[u]);
+                    
+                    lst[i] = Regex.Replace(helpfunc.RemoveExtraSpaces( lst[i]), patterns[u], typeperemen[cou] + " " + other.watdefinestack[u]);
                     wasDifune = true;
-
+                    if (!waswh) { lastdel++; }
+                    waswh = true;
                     string typeVar = typeperemen[cou] + " ";
                     lst[i] = helpfunc.RemoveExtraSpaces( lst[i]
                         .Replace($"[{typeVar}", $" {typeVar} [")
@@ -1246,17 +1113,24 @@ public unsafe class Sas
                         .Replace($"[{typeVar.Trim()}", $" {typeVar.Trim()} [")
                         .Replace($"[ {typeVar.Trim()}", $" {typeVar.Trim()} ["));
                 }
+                
+             
+            }
+              if (lst[i]=="jmp endOasm"&&lastdel!=0) 
+                {
+                for (global::System.Int32 j = 0; j < lastdel; j++)
+                {
+                    other.watdefinestack.RemoveAt(lastdel);
+                    other.definestack.RemoveAt(lastdel);
+                }
+
             }
         }
 
-        if (wasDifune)
-        {
+       
             File.WriteAllLines(file, lst);
-        }
-        foreach (var item in func)
-        {
-            Console.WriteLine(item);
-        }
+        
+       
         //}
         //catch (Exception)
         //{
@@ -1285,7 +1159,7 @@ public unsafe class Sas
         // if (errorcount != 0) { Console.WriteLine("Ошибки:"); }
         //Console.WriteLine($"Ошибок при интерпретации: {errorcount}");
         Console.WriteLine("Интерпретация завершена: " + stopwatch.ElapsedMilliseconds + " мс\nКомпиляция...");
-
+      
         Process process = new Process();
         process.StartInfo.FileName = "fasm/fasm.exe";
         process.StartInfo.UseShellExecute = false;
@@ -1335,9 +1209,48 @@ public unsafe class Sas
         Console.ReadKey();
         Environment.Exit(0);
     }
+    public static bool Parscallc(string file, string realcommandto, List<string> func, int realpoz, List<string> peremen, List<string> typeperemen, List<string> macroses, List<string> dllfunc, bool recur, bool canbus)
+    {
 
+        bool chek = Parscall(file, realcommandto, func, realpoz, peremen, typeperemen, macroses, dllfunc, recur, canbus);
+        if (!chek)
+        {
+            for (int i = 0; i < dllfunc.Count; i++)
+            {
+                if (realcommandto.TrimStart() == dllfunc[i])
+                {
 
-    public static bool Parscall(string file, string realcommandto, List<string> func, int realpoz, List<string> peremen, List<string> typeperemen, List<string> macroses, List<string> dllfunc, bool recur, bool canbus)
+                    File.AppendAllText(file, "\ninvoke " + realcommandto);
+                    return true;
+                }
+            }
+
+            for (int i = 0; i < func.Count; i++)
+            {
+
+                if (realcommandto.TrimStart() == func[i])
+                {
+                    File.AppendAllText(file, "\nstdcall " + realcommandto);
+                    return true;
+                }
+            }
+
+            for (int i = 0; i < macroses.Count(); i++)
+            {
+
+                if (realcommandto.TrimStart() == macroses[i])
+                {
+
+                    File.AppendAllText(file, "\n" + realcommandto);
+                    return true;
+
+                }
+            }
+        }
+        return chek;
+    }
+
+    public static bool Parscall(string file, string realcommandto, List<string> func, int realpoz, List<string> peremen, List<string> typeperemen, List<string> macroses, List<string> dllfunc, bool recur, bool canbus,int ffer=0)
     {
 
         string[] srtc = null;
@@ -1383,7 +1296,7 @@ public unsafe class Sas
                     }
                     for (int i = 0; i < dllfunc.Count; i++)
                     {
-                        if (com.TrimStart().StartsWith(dllfunc[i] + " "))
+                        if (com.TrimStart().StartsWith(dllfunc[i] + " ")|| com.TrimStart().Contains("."+dllfunc[i]))
                         {
 
                             dllfun = true;
@@ -1395,7 +1308,7 @@ public unsafe class Sas
                     for (int i = 0; i < func.Count; i++)
                     {
 
-                        if (com.TrimStart().StartsWith(func[i] + " "))
+                        if (com.TrimStart().StartsWith(func[i] + " ") || com.TrimStart().Contains("." + func[i]))
                         {
                             ismacro = false;
                             com = macro;
@@ -1407,7 +1320,7 @@ public unsafe class Sas
                     for (int i = 0; i < macroses.Count(); i++)
                     {
 
-                        if (com.TrimStart().StartsWith(macroses[i] + " "))
+                        if (com.TrimStart().StartsWith(macroses[i] + " ") || com.TrimStart().Contains("." + macroses[i]))
                         {
                             //Console.WriteLine(macroses[i] + " ddddd");
 
@@ -1452,7 +1365,7 @@ public unsafe class Sas
 
                             //}
                             // Console.WriteLine(com);
-                            if (!ismacro && !funci ||  dllfun)
+                            if (!ismacro && funcn ||  dllfun)
                             {
 
                                 string real = realcommandto.TrimStart();
@@ -1466,6 +1379,7 @@ public unsafe class Sas
                                     srtc[0] = new String(a);
                                     string[] parts = helpfunc.SplitString(srtc[0]).ToArray();
                                     int buffer = 0;
+                                buffer = ffer;
                                     string[] lin = File.ReadAllLines(file);
                                     int ccc = lin.Length - 1;
                                     for (int i = 1; i < parts.Length; i++)
@@ -1479,11 +1393,19 @@ public unsafe class Sas
 
                                                 parts[i] = parts[i].TrimEnd().TrimStart().Substring(0, parts[i].TrimEnd().TrimStart().Length - 1);
                                                 int ig = parts[i].IndexOf("(");
-                                                parts[i] = parts[i].Remove(ig, 1).Insert(ig, " "); ////Console.WriteLine(parts[i]);
+                                            try
+                                            {
 
+                                             parts[i] = parts[i].Remove(ig, 1).Insert(ig, " "); ////Console.WriteLine(parts[i]);
+ }
+                                            catch (Exception)
+                                            {
 
                                             }
-                                            if (!Parscall(file, parts[i], func, realpoz, peremen, typeperemen, macroses, dllfunc, true, false))
+                                              
+
+                                            }
+                                            if (!Parscall(file, parts[i], func, realpoz, peremen, typeperemen, macroses, dllfunc, true, false,buffer))
                                             {
                                                 if (char.IsLetter(parts[i].Trim().Replace(" ", null)[0]))
                                                 { parts[i] = $"[{parts[i]}]"; }
@@ -1492,7 +1414,7 @@ public unsafe class Sas
                                             {
                                                 buffer += 4;
                                                 File.AppendAllText(file, $"\nmov dword [ebp-{buffer}],eax");
-                                                parts[i] = $"[ebp-{buffer}]";
+                                                parts[i] = $"dword [ebp-{buffer}]";
                                             }
 
 
@@ -1500,11 +1422,11 @@ public unsafe class Sas
 
 
                                     }
-                                    if (buffer != 0)
+                                    if (buffer != 0 )
                                     {
                                         lin = File.ReadAllLines(file);
                                         lin[ccc] = lin[ccc].Insert(lin[ccc].Length, $"\nsub esp,{buffer}");
-
+                                    buffer += 4;
                                         File.WriteAllLines(file, lin);
                                     }
                                     string g = string.Join(",", parts);
@@ -1578,20 +1500,56 @@ public unsafe class Sas
 
 
                         }
-                        else
+                        else if(!recur)
                         {
-                            try
+                        string[] strings = realcommandto.Split(" ");
+                        string[] parts = helpfunc.SplitString(strings[2]).ToArray();
+                        int buffer = 0; buffer = ffer;
+                        string[] lin = File.ReadAllLines(file);
+                        int ccc = lin.Length - 1;
+                        for (int i = 0; i < parts.Length; i++)
+                        {
+                            if (parts[i].Length >= 1)
                             {
 
+                                parts[i] = helpfunc.parsstring(parts[i], true, stringstoaddend, stringlasted);
+                                if (parts[i].TrimEnd().EndsWith(")"))
+                                {
 
-                                File.AppendAllText(file, "\n" + srtc[1] + " " + srtc[0].Replace(")", " ").Replace("(", " ") + " " + srtc[2]);
-                                return true;
-                            }
-                            catch (Exception)
-                            {
-                                return true;
+                                    parts[i] = parts[i].TrimEnd().TrimStart().Substring(0, parts[i].TrimEnd().TrimStart().Length - 1);
+                                    int ig = parts[i].IndexOf("(");
+                                    parts[i] = parts[i].Remove(ig, 1).Insert(ig, " "); ////Console.WriteLine(parts[i]);
+
+
+                                }
+                                if (!Parscall(file, parts[i], func, realpoz, peremen, typeperemen, macroses, dllfunc, true, false,buffer))
+                                {
+                                    if (char.IsLetter(parts[i].Trim().Replace(" ", null)[0]))
+                                    { parts[i] = $"[{parts[i]}]"; }
+                                }
+                                else
+                                {
+                                    buffer += 4;
+                                    File.AppendAllText(file, $"\nmov dword [ebp-{buffer}],eax");
+                                    parts[i] = $"dword  [ebp-{buffer}]";
+                                }
+
 
                             }
+
+
+                        }
+                        if (buffer != 0)
+                        {
+                            lin = File.ReadAllLines(file);
+                            lin[ccc] = lin[ccc].Insert(lin[ccc].Length, $"\nsub esp,{buffer}");
+
+                            File.WriteAllLines(file, lin);
+                        }
+                        strings[2] = string.Join(",", parts);
+                        File.AppendAllText(file, "\n" + strings[1] + " " + strings[0].Replace(")", " ").Replace("(", " ") + " " + strings[2]);
+                                return true;
+                            
                           
                         }
                     }
@@ -1602,8 +1560,8 @@ public unsafe class Sas
 
                         string[] h = realcommandto.TrimStart().Split(" ", 2);
                         string[] parts =helpfunc.SplitString(h[1]).ToArray();
-                        int buffer = 0;
-                        string[] lin = File.ReadAllLines(file);
+                        int buffer = 0; buffer = ffer;
+                    string[] lin = File.ReadAllLines(file);
                         int ccc = lin.Length - 1;
                         for (int i = 0; i < parts.Length; i++)
                     {
@@ -1619,7 +1577,7 @@ public unsafe class Sas
 
 
                             }
-                            if (!Parscall(file, parts[i], func, realpoz, peremen, typeperemen, macroses, dllfunc, true, false))
+                            if (!Parscall(file, parts[i], func, realpoz, peremen, typeperemen, macroses, dllfunc, true, false, buffer))
                             {
                                 if (char.IsLetter(parts[i].Trim().Replace(" ", null)[0]))
                                 { parts[i] = $"[{parts[i]}]"; }
@@ -1628,7 +1586,7 @@ public unsafe class Sas
                             {
                                 buffer += 4;
                                 File.AppendAllText(file, $"\nmov dword [ebp-{buffer}],eax");
-                                parts[i] = $"[ebp-{buffer}]";
+                                parts[i] = $"dword  [ebp-{buffer}]";
                             }
 
 

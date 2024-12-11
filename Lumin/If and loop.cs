@@ -1,19 +1,18 @@
-﻿using System.ComponentModel.Design;
-using System.Text;
+﻿using System;
 using System.Text.RegularExpressions;
 
 namespace Lumin
 {
     public unsafe class If_and_loop
     {
-      
-        public static void ParsIf(string command, int poz, string file, string inputFilePath, List<string> func, int err,bool whiled)
+
+        public static void ParsIf(string command, int poz, string file, string inputFilePath, List<string> func, int err, bool whiled, List<string> dllfunc, List<string> macroses, List<string> stringstoaddend, int stringlasted, List<string> peremen, List<string> typeperemen)
         {
             string[] lines5 = File.ReadAllLines(file);
             bool iny2 = false;
             bool wased2 = false;
             string d;
-            if (command.TrimStart().StartsWith("if ") || command.TrimStart().StartsWith("else") || command.TrimStart().StartsWith("else if ")||whiled)
+            if (command.TrimStart().StartsWith("if ") || command.TrimStart().StartsWith("else") || command.TrimStart().StartsWith("else if ") || whiled)
             {
 
 
@@ -26,21 +25,233 @@ namespace Lumin
                 result = Regex.Replace(result, patternOr2, "&");
                 result = Regex.Replace(result, patternEquals, "=");
                 result = Regex.Replace(result, patternOr3, "~");
-                result = result.Replace("!=","~=");
+                result = result.Replace("!=", "~=").Replace("@~", "~@");
                 // result=RemoveAtSymbols(result);
                 string[] a = result.TrimStart().Split(new char[] { ' ' });
+                List<string> parts = new List<string>();
+                string currentPart = "";
+
+
+                char[] operators = new char[] {  '>', '<', '=', '~', '(', ')' };
+
+
+
                 if (!result.StartsWith("else if "))
                 {
                     if (!result.StartsWith("else"))
                     {
-                        result = a[0] + helpfunc.WrapWordsInBrackets(result.Substring(result.IndexOf(" ")));
+                        if (result.Contains("=") || result.Contains(">") || result.Contains("<") || result.Contains("~"))
+                        {
+                            bool insideSingleQuote = false;
+                            bool insideDoubleQuote = false;
+
+                            for (int i = 0; i < result.Substring(result.IndexOf(" ")).Length; i++)
+                            {
+                                char c = result.Substring(result.IndexOf(" "))[i];
+
+                            
+                                if (c == '\'')
+                                {
+                                    insideSingleQuote = !insideSingleQuote;
+                                }
+                                else if (c == '\"')
+                                {
+                                    insideDoubleQuote = !insideDoubleQuote;
+                                }
+
+                                
+                                if (!insideSingleQuote && !insideDoubleQuote)
+                                {
+                                    if (Array.Exists(operators, element => element == c))
+                                    {
+                                        if (!string.IsNullOrWhiteSpace(currentPart))
+                                        {
+                                            parts.Add(currentPart);
+                                            currentPart = "";
+                                        }
+
+                                        if (c != ' ')
+                                        {
+                                            parts.Add(c.ToString());
+                                        }
+                                    }
+                                    else
+                                    {
+                                        currentPart += c;
+                                    }
+                                }
+                                else
+                                {
+                                    currentPart += c; 
+                                }
+                            }
+
+                           
+                            if (!string.IsNullOrWhiteSpace(currentPart))
+                            {
+                                parts.Add(currentPart);
+                            }
+                            int buffer = 0;
+                            string[] lin = File.ReadAllLines(file);
+                            int ccc = lin.Length - 1;
+                     
+                            for (int i = 0; i < parts.Count; i++)
+                            {
+                                if (parts[i].Length >= 1)
+                                {
+                                    Console.WriteLine(parts[i]);
+                                    if (parts[i].TrimEnd().EndsWith("@") && parts[i].TrimStart().StartsWith("\""))
+                                    {
+                                        parts[i] = helpfunc.parsstring(parts[i].Substring(0, parts[i].Length-1), true, stringstoaddend, stringlasted);
+                                    }
+                                    if (parts[i].TrimEnd().EndsWith(")")&& parts[i].Contains("("))
+                                    {
+                                        
+                                        parts[i] = parts[i].TrimEnd().TrimStart().Substring(0, parts[i].TrimEnd().TrimStart().Length - 1);
+                                        int ig = parts[i].IndexOf("(");
+                                       
+                                        parts[i] = parts[i].Remove(ig, 1).Insert(ig, " "); ////Console.WriteLine(parts[i]);
+
+
+                                    }
+                                    if (!Sas.Parscallc(file, parts[i].TrimStart(), func, poz, peremen, typeperemen, macroses, dllfunc, true, true))
+                                    {
+
+                                        if (char.IsLetter(parts[i].Trim().Replace(" ", null)[0]))
+                                        { parts[i] = $"[{parts[i]}]"; }
+                                    }
+                                    else
+                                    {
+                                        buffer += 4;
+                                        File.AppendAllText(file, $"\nmov dword [ebp-{buffer}],eax");
+                                        parts[i] = $"dword [ebp-{buffer}]";
+                                    }
+
+
+                                }
+
+
+                            }
+                            if (buffer != 0)
+                            {
+                                lin = File.ReadAllLines(file);
+                                lin[ccc] = lin[ccc].Insert(lin[ccc].Length, $"\nsub esp,{buffer}");
+
+                                File.WriteAllLines(file, lin);
+                            }
+                            result = a[0] + " " + string.Join(null, parts);
+                        }
+                        else { result = a[0] + " " + helpfunc.WrapWordsInBrackets(result.Substring(result.IndexOf(" "))); }
                     }
-                    else 
+                    else
                     {
-                        
+
                     }
                 }
-                else { result = a[0] + helpfunc.WrapWordsInBrackets(result.Substring(result.IndexOf(" ")).Substring(3)); }
+                else
+                {
+                    if (result.Contains("=") || result.Contains(">") || result.Contains("<") || result.Contains("~"))
+                    {
+                        bool insideSingleQuote = false;
+                        bool insideDoubleQuote = false; 
+
+                        for (int i = 0; i < result.Substring(result.IndexOf(" ")).Length; i++)
+                        {
+                            char c = result.Substring(result.IndexOf(" "))[i];
+
+                      
+                            if (c == '\'')
+                            {
+                                insideSingleQuote = !insideSingleQuote; 
+                            }
+                            else if (c == '\"')
+                            {
+                                insideDoubleQuote = !insideDoubleQuote; 
+                            }
+
+                           
+                            if (!insideSingleQuote && !insideDoubleQuote)
+                            {
+                                if (Array.Exists(operators, element => element == c))
+                                {
+                                    if (!string.IsNullOrWhiteSpace(currentPart))
+                                    {
+                                        parts.Add(currentPart);
+                                        currentPart = "";
+                                    }
+
+                                    if (c != ' ')
+                                    {
+                                        parts.Add(c.ToString());
+                                    }
+                                }
+                                else
+                                {
+                                    currentPart += c;
+                                }
+                            }
+                            else
+                            {
+                                currentPart += c; 
+                            }
+                        }
+
+                   
+                        if (!string.IsNullOrWhiteSpace(currentPart))
+                        {
+                            parts.Add(currentPart);
+                        }
+                        int buffer = 0;
+                        string[] lin = File.ReadAllLines(file);
+                        int ccc = lin.Length - 1;
+                        //  Console.WriteLine("Части после разделения:");
+                        for (int i = 0; i < parts.Count; i++)
+                        {
+                            if (parts[i].Length >= 1)
+                            {
+
+                                if (parts[i].TrimEnd().EndsWith("@") && parts[i].TrimStart().StartsWith("\""))
+                                {
+                                    parts[i] = helpfunc.parsstring(parts[i].Substring(0, parts[i].Length - 1), true, stringstoaddend, stringlasted);
+                                }
+                                if (parts[i].TrimEnd().EndsWith(")") && parts[i].Contains("("))
+                                {
+
+                                    parts[i] = parts[i].TrimEnd().TrimStart().Substring(0, parts[i].TrimEnd().TrimStart().Length - 1);
+                                    int ig = parts[i].IndexOf("(");
+                                    parts[i] = parts[i].Remove(ig, 1).Insert(ig, " "); ////Console.WriteLine(parts[i]);
+
+
+                                }
+                                if (!Sas.Parscallc(file, parts[i].TrimStart(), func, poz, peremen, typeperemen, macroses, dllfunc, true, true))
+                                {
+                                    
+                                    if (char.IsLetter(parts[i].Trim().Replace(" ", null)[0]))
+                                    { parts[i] = $"[{parts[i]}]"; }
+                                }
+                                else
+                                {
+                                    buffer += 4;
+                                    File.AppendAllText(file, $"\nmov dword [ebp-{buffer}],eax");
+                                    parts[i] = $"[ebp-{buffer}]";
+                                }
+
+
+                            }
+
+
+                        }
+                        if (buffer != 0)
+                        {
+                            lin = File.ReadAllLines(file);
+                            lin[ccc] = lin[ccc].Insert(lin[ccc].Length, $"\nsub esp,{buffer}");
+
+                            File.WriteAllLines(file, lin);
+                        }
+                        result = a[0] + " " + string.Join(null, parts);
+                    }
+                    else { result = a[0] + " " + helpfunc.WrapWordsInBrackets(result.Substring(result.IndexOf(" ")).Substring(3)); }
+                }
                 if (!whiled)
                 {
                     if (!command.TrimStart().StartsWith("else if "))
@@ -959,7 +1170,7 @@ namespace Lumin
                 {
                     if (!char.IsLetter(a[2][0]))
                     {
-                        return $"\nsub [{a[0]}],{a[2].Replace("-",null)}\ncmp [{a[0]}],{a[1]}\njne {funec}";
+                        return $"\nsub [{a[0]}],{a[2].Replace("-", null)}\ncmp [{a[0]}],{a[1]}\njne {funec}";
                     }
                     else
                     {
@@ -1007,7 +1218,7 @@ namespace Lumin
                         }
                         else if (typeperemen[isp] == "word" || typeperemen[isp] == "ubyte")
                         {
-                          
+
                             // File.AppendAllText(file, $"\nmov ax,[{a[2]}]\nadd [{a[0]}],ax\ncmp [{a[0]}],{a[1]}\njne {funec}");
                             return $"\nmov ax,[{a[2]}]\nadd [{a[0]}],ax\ncmp [{a[0]}],ax\njne {funec}";
                         }

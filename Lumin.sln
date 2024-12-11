@@ -5,6 +5,8 @@ VisualStudioVersion = 17.10.35013.160
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lumin", "Lumin\Lumin.csproj", "{CE883697-4940-4ABD-A8C9-3EAC4CDA4A02}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "IDE", "IDE\IDE.csproj", "{D5C7B923-90A9-402E-9552-38726DAB91A2}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -15,6 +17,10 @@ Global
 		{CE883697-4940-4ABD-A8C9-3EAC4CDA4A02}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{CE883697-4940-4ABD-A8C9-3EAC4CDA4A02}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{CE883697-4940-4ABD-A8C9-3EAC4CDA4A02}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D5C7B923-90A9-402E-9552-38726DAB91A2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D5C7B923-90A9-402E-9552-38726DAB91A2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D5C7B923-90A9-402E-9552-38726DAB91A2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D5C7B923-90A9-402E-9552-38726DAB91A2}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

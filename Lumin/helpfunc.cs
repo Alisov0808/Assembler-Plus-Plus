@@ -1,15 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+﻿using System.Text;
 using System.Text.RegularExpressions;
-using System.Threading.Tasks;
 
 namespace Lumin
 {
     public static class helpfunc
     {
-      public  static string WrapWordsInBrackets(string input)
+        public static string WrapWordsInBrackets(string input)
         {
             string pattern = @"\b[a-zA-Z][\w\.]*@?\b";
 
@@ -60,6 +56,7 @@ namespace Lumin
 
             for (int i1 = 0; i1 < command3.Count(); i1++)
             {
+
                 if (command3[i1].EndsWith(':'))
                 {
                     func.Add(command3[i1].Replace(":", "").Trim());// Console.WriteLine(command3[i1].Replace(":", "").Trim());
@@ -121,6 +118,20 @@ namespace Lumin
                     func.Add($"{macro[0].Trim()}");
 
                     //Console.WriteLine($"{macro[0].Trim()}" + "fdfsdfsdfsdfsggggggggggggggggggggggggggggggggggggggggggggggggggggggd");
+                }
+                else if (command3[i1].TrimStart().StartsWith("extrn "))
+                {
+                    func.Add(command3[i1].Substring(6).Trim());
+
+                }
+                else if (command3[i1].TrimStart().StartsWith(";lumdefine "))
+                {
+
+                    string res = command3[i1].TrimStart().Substring(11);
+                    string[] a = res.Split(',', 2);
+
+                    other.define.Add(a[0]);
+                    other.watdefine.Add(a[1]);
                 }
             }
         }
@@ -217,9 +228,10 @@ namespace Lumin
 
             return commands;
         }
-        public static string parsstring(string wat, bool pointer,List<string> stringstoaddend,int stringlasted)
+        static private int last = 0;
+        public static string parsstring(string wat, bool pointer, List<string> stringstoaddend, int stringlasted = 0)
         {
-            stringlasted++;
+            last++;
             if (wat.Trim().StartsWith("\"") && wat.Trim().EndsWith("\""))
             {
 
@@ -231,8 +243,8 @@ namespace Lumin
                         return item.Substring(0, item.IndexOf(' ')) + "@";
                     }
                 }
-                stringstoaddend.Add($"bytedaddedLC{stringlasted} db {wat},0");
-                if (pointer) return $"bytedaddedLC{stringlasted}@";
+                stringstoaddend.Add($"bytedaddedLC{last} db {wat},0");
+                if (pointer) return $"bytedaddedLC{last}@";
 
                 return $"bytedaddedLC{stringlasted}";
             }
@@ -444,11 +456,15 @@ namespace Lumin
         {
             string output = input;
             string pattern = @"(?<!['""])(\S+)\[(\S+)\](?!['""])";
-            if (input.IndexOf("[") != 0)
+            if (input.IndexOf("[") != -1 || input.IndexOf("[") != 0)
             {
                 if (char.IsLetter(input[input.IndexOf("[") - 1]))
                 {
-                    output = Regex.Replace(input, pattern, "$1+$2");
+                    foreach (var item in Sas.peremen)
+                    {
+                        if (item[item.Length-1] == input[input.IndexOf("[") - 1]) { output = Regex.Replace(input, pattern, "$1+$2"); }
+                    }
+                   
                 }
 
             }
@@ -461,6 +477,18 @@ namespace Lumin
 
             string output = Regex.Replace(line, pattern, m => $"{m.Groups[2].Value} {m.Groups[1].Value}");
             return output;
+        }
+        public static string ReplaceQ(string input, string pattern, string replacement)
+        {
+            // Регулярное выражение для поиска текста, который не находится в кавычках
+            string regexPattern = $@"(?<!'[^']*)(?<!""[^""]*)\b{pattern}(?![^'']*'|[^""]*""|.*$)";
+
+            // Замена с использованием Regex.Replace
+            return Regex.Replace(input, regexPattern, match =>
+            {
+                // Получаем весь найденный текст и заменяем только те, что вне кавычек
+                return replacement;
+            });
         }
         public static string ReplaceRegisters(string line)
         {
@@ -483,7 +511,7 @@ namespace Lumin
             // Замена с использованием регулярного выражения
             return Regex.Replace(line, pattern, match => replacements[match.Value]);
         }
-       public static string ReplaceRegisters2(string line)
+        public static string ReplaceRegisters2(string line)
         {
 
             string pattern = @"\b(esp|ebp)\b(?!\s*\()";
